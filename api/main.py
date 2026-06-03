@@ -4,19 +4,19 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
+from api.routers import browse
+
 app = FastAPI()
 
-# 💡 Google CloudのプロジェクトIDを設定（環境変数から読み込むのがベスト）
-# ローカルテスト用なら直接文字列で入れても安全です（APIキーではないため）
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
-LOCATION = "us-central1"  # Geminiが利用可能なリージョンを指定
-
-# Clientを初期化（引数でvertexai=Trueにすると、自動的にADCの認証情報を探しに行きます）
+LOCATION = "us-central1"
 client = genai.Client(
     vertexai=True,
     project=PROJECT_ID,
     location=LOCATION
 )
+
+app.include_router(browse.router)
 
 @app.get("/")
 def root():
