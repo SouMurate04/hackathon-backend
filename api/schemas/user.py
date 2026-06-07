@@ -1,15 +1,18 @@
 from pydantic import BaseModel
-from datetime import datetime
 
 class NewUser(BaseModel):
     name: str
     email: str
 
-class User(BaseModel):
-    id: int
+class UpdateUser(BaseModel):
     name: str
     email: str
-    created_at: datetime
+
+class User(BaseModel):
+    id: int
+    firebase_uid: str
+    name: str
+    email: str
 
     model_config = {
         "from_attributes": True

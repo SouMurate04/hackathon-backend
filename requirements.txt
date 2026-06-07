@@ -4,3 +4,4 @@ openai
 google-genai
 sqlalchemy
 aiomysql
+firebase-admin

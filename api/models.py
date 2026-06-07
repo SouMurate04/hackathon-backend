@@ -8,6 +8,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    firebase_uid = Column(String(255), nullable=False, unique=True)
     name = Column(String(255))
     email = Column(String(255), nullable=False, unique=True)
 
