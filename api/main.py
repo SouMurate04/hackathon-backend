@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -25,6 +26,14 @@ app.include_router(like.router)
 app.include_router(chat.router)
 app.include_router(notify.router)
 '''
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["hackathon-frontend-six-phi.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
