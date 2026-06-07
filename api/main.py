@@ -28,10 +28,18 @@ app.include_router(notify.router)
 '''
 
 WEB_URL = os.getenv("WEB_URL")
+allow_origins = [
+    origin
+    for origin in [
+        WEB_URL,
+        "http://localhost:3000",
+    ]
+    if origin
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[WEB_URL],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
