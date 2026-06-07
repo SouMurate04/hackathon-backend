@@ -27,9 +27,11 @@ app.include_router(chat.router)
 app.include_router(notify.router)
 '''
 
+WEB_URL = os.getenv("WEB_URL")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["hackathon-frontend-six-phi.vercel.app"],
+    allow_origins=[WEB_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
