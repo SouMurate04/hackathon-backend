@@ -9,13 +9,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_async_engine(
     DATABASE_URL,
-    connect_args={
-        "ssl": {
-            "ca": "certs/server-ca.pem",
-            "cert": "certs/client-cert.pem",
-            "key": "certs/client-key.pem",
-        }
-    },
 )
 
 AsyncSessionLocal = async_sessionmaker(
