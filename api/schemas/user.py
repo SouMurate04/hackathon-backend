@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-class Email(BaseModel):
+class NewUser(BaseModel):
+    name: str
     email: str
 
 
