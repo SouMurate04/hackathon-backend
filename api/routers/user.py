@@ -11,7 +11,7 @@ router = APIRouter()
 
 # ユーザー情報を新規登録(サインアップ時)
 @router.post("/user", response_model=None)
-async def create_user(request: user_schema.Email, db: AsyncSession = Depends(get_db)):
+async def create_user(request: user_schema.NewUser, db: AsyncSession = Depends(get_db)):
     return await user_crud.create_user(db, request)
 
 # ユーザー情報を取得
