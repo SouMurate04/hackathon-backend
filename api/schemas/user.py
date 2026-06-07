@@ -4,7 +4,7 @@ class NewUser(BaseModel):
     name: str
     email: str
 
-class UpdateUser(BaseModel):
+class UpdatedUser(BaseModel):
     name: str
     email: str
 

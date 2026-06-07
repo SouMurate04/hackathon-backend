@@ -28,7 +28,7 @@ async def get_user(uid: str, db: AsyncSession = Depends(get_db),
 
 # ユーザー情報を更新
 @router.put("/user", response_model=None)
-async def update_user(request: user_schema.UserUpdate, db: AsyncSession = Depends(get_db),
+async def update_user(request: user_schema.UpdatedUser, db: AsyncSession = Depends(get_db),
     firebase_user: dict = Depends(get_current_firebase_user)):
 
     firebase_uid = firebase_user["uid"]
