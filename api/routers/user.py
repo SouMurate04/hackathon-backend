@@ -16,10 +16,10 @@ async def create_user(request: user_schema.NewUser, db: AsyncSession = Depends(g
 
 # ユーザー情報を取得
 @router.get("/user", response_model=user_schema.User)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    return await crud.get_user(db, user_id)
+async def get_user(email: str, db: AsyncSession = Depends(get_db)):
+    return await user_crud.get_user(db, email)
 
 # ユーザー情報を更新
-@router.put("/user", response_model=user_schema.User)
+@router.put("/user", response_model=None)
 async def update_user(user: user_schema.User, db: AsyncSession = Depends(get_db)):
     return await crud.update_user(db, user)

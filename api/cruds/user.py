@@ -12,3 +12,9 @@ async def create_user(db: AsyncSession, new_user: user_schema.NewUser):
     await db.commit()
     await db.refresh(record)
     return
+
+async def get_user(db: AsyncSession, email: str) -> user_schema.User:
+    result: Result = await(
+        db.execute(select(model.User).where(model.User.email == email))
+    )
+    return result.first() 

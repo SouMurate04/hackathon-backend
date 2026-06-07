@@ -5,7 +5,6 @@ class NewUser(BaseModel):
     name: str
     email: str
 
-
 class User(BaseModel):
     id: int
     name: str
