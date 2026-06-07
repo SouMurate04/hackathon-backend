@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.schema import UniqueConstraint
 from api.db import Base
 
 # ユーザー
@@ -7,7 +8,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
+    name = Column(String(255))
     email = Column(String(255), nullable=False, unique=True)
 
 # 商品
@@ -18,9 +19,11 @@ class Item(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     price = Column(Integer, nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id"))
     seller_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     buyer_id = Column(Integer, ForeignKey("users.id"))
     posted_at = Column(DateTime, nullable=False)
+    bought_at = Column(DateTime)
 
 # いいね(ジャンクション)
 class Like(Base):
@@ -28,7 +31,8 @@ class Like(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"),nullable=False )
+    UniqueConstraint("item_id", "user_id")
 
 # 画像(ジャンクション)
 class Image(Base):
@@ -38,17 +42,10 @@ class Image(Base):
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     url = Column(String(255), nullable=False)
 
-# カテゴリー(ジャンクション)
+# カテゴリーid(ジャンクション)
 class Category(Base):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("category_ids.id"))
-
-# カテゴリーとidの対応
-class Category_Id(Base):
-    __tablename__ = "category_ids"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True)
 
@@ -57,10 +54,10 @@ class Tag(Base):
     __tablename__ = "tags"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
 
-# チャット(ジャンクション)
+# チャット(ジャンクション/発言ごとに管理)
 class Chat(Base):
     __tablename__ = "chats"
 
