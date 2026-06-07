@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(
+engine = create_async_engine(
     DATABASE_URL,
     connect_args={
         "ssl": {
@@ -15,13 +15,17 @@ engine = create_engine(
             "cert": "certs/client-cert.pem",
             "key": "certs/client-key.pem",
         }
-    }
+    },
 )
 
-SessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
     autocommit=False,
     autoflush=False,
-    bind=engine
 )
 
 Base = declarative_base()
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session

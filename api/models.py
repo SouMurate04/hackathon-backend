@@ -1,13 +1,13 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from db import Base
+from api.db import Base
 
 # ユーザー
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=True)
     email = Column(String(255), nullable=False, unique=True)
 
 # 商品

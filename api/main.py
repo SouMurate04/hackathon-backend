@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from api.routers import browse
+from api.routers import user
 
 app = FastAPI()
 
@@ -16,7 +16,15 @@ client = genai.Client(
     location=LOCATION
 )
 
+app.include_router(user.router)
+'''
 app.include_router(browse.router)
+app.include_router(sell.router)
+app.include_router(buy.router)
+app.include_router(like.router)
+app.include_router(chat.router)
+app.include_router(notify.router)
+'''
 
 @app.get("/")
 def root():
