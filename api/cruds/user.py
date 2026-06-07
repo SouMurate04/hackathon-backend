@@ -23,7 +23,7 @@ async def get_user(db: AsyncSession, firebase_uid: str) -> user_schema.User:
     )
     return result.scalars().first() 
 
-async def update_user(db: AsyncSession, firebase_uid: str, request: user_schema.UserUpdate):
+async def update_user(db: AsyncSession, firebase_uid: str, request: user_schema.UpdatedUser):
     user = await get_user(db, firebase_uid)
 
     user.name = request.name
