@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import api.models as model
 import api.schemas.item as item_schema
 
-async def create_item(db: AsyncSession, new_item: item_schema.NewItem, firebase_uid: str):
+async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema.NewItem):
     result = await db.execute(
         select(model.User).where(model.User.firebase_uid == firebase_uid)
     )
@@ -14,7 +14,7 @@ async def create_item(db: AsyncSession, new_item: item_schema.NewItem, firebase_
     if seller is None:
         raise ValueError("User not found")
     
-    record = model.PostedItem(
+    item_record = model.Item(
         name=new_item.name,
         description=new_item.description,
         price=new_item.price,
@@ -23,26 +23,25 @@ async def create_item(db: AsyncSession, new_item: item_schema.NewItem, firebase_
         posted_at=datetime.now()
     )
 
-    db.add(item)
-    db.flush()
+    db.add(item_record)
+    await db.flush()
 
-    record = model.Image(
+    image_record = model.Image(
         item_id=item.id,
         url=new_item.image_url
     )
 
-    db.add(record)
-    db.flush()
+    db.add(image_record)
 
     for tag in new_item.tags:
-        record = model.Tag(
+        tag_record = model.Tag(
             item_id=item.id,
             name=tag
         )
 
-        db.add(record)
+        db.add(tag_record)
         db.flush()
 
     await db.commit()
-    await db.refresh(item)
+    await db.refresh(item_record)
     return

@@ -27,6 +27,7 @@ async def generate_introduction(db: AsyncSession = Depends(get_db)):
 async def create_item(
     name: str = Form(...), price: int = Form(...),
     description: str = Form(""), image: UploadFile = File(...), 
+    category_id: int = Form(...), tags: List[str] = Form([]),
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
 
@@ -42,7 +43,7 @@ async def create_item(
     blob.upload_from_file(image.file, content_type=image.content_type)
     image_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
 
-    request = item_schema.NewItem(name=name, price=price, description=description, image_url=image_url)
+    request = item_schema.NewItem(name=name, price=price, description=description, image_url=image_url, category_id=category_id, tags=tags)
     firebase_uid = firebase_user["uid"]
     return await sell_crud.create_item(db, firebase_uid, request)
 
