@@ -2,11 +2,12 @@ import os
 from uuid import uuid4
 
 from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from google.cloud import storage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db import get_db
+from api.firebase_auth import get_current_firebase_user
 
 import api.schemas.message as message_schema
 import api.schemas.item as item_schema
