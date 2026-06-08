@@ -27,7 +27,7 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
     await db.flush()
 
     image_record = model.Image(
-        item_id=item.id,
+        item_id=item_record.id,
         url=new_item.image_url
     )
 
@@ -35,12 +35,11 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
 
     for tag in new_item.tags:
         tag_record = model.Tag(
-            item_id=item.id,
+            item_id=item_record.id,
             name=tag
         )
 
         db.add(tag_record)
-        db.flush()
 
     await db.commit()
     await db.refresh(item_record)
