@@ -1,4 +1,4 @@
-from pydantic import BaseModel, datatime
+from pydantic import BaseModel, datetime
 
 # 新規商品
 class NewItem(BaseModel):
@@ -20,7 +20,6 @@ class PostedItem(BaseModel):
     model_config = {
         "from_attributes": True
     }
-
 
 # 商品(返り値)
 class Item(BaseModel):
