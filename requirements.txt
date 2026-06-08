@@ -5,3 +5,5 @@ google-genai
 sqlalchemy
 aiomysql
 firebase-admin
+google-cloud-storage
+python-multipart
