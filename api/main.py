@@ -9,6 +9,7 @@ from api.routers import user, sell
 
 app = FastAPI()
 
+'''
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 LOCATION = "us-central1"
 client = genai.Client(
@@ -16,6 +17,7 @@ client = genai.Client(
     project=PROJECT_ID,
     location=LOCATION
 )
+'''
 
 app.include_router(user.router)
 app.include_router(sell.router)
@@ -44,7 +46,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+'''
 @app.get("/")
 def root():
     return {"message": "Hello FastAPI"}
@@ -64,3 +66,4 @@ async def chat_with_gemini(request: ChatRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+'''
