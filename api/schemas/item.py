@@ -1,4 +1,5 @@
-from pydantic import BaseModel, datetime
+from pydantic import BaseModel
+from datetime import datetime
 
 # 新規商品
 class NewItem(BaseModel):
