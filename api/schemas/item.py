@@ -30,7 +30,7 @@ class Item(BaseModel):
     seller: str
     buyer: str | None = None
     posted_at: datetime
-    catrgory: name
+    catrgory_id: int
     tags: list[str] = []
 
     model_config = {
