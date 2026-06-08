@@ -16,9 +16,11 @@ import api.cruds.sell as sell_crud
 router = APIRouter()
 
 # 出品紹介の生成
+'''
 @router.post("/sell/introduction", response_model=item_schema.GeneratedIntroduction)
 async def generate_introduction(db: AsyncSession = Depends(get_db)):
     return await crud.get_notifications(db)
+'''
 
 # 商品出品
 @router.post("/sell", response_model=None)
@@ -44,6 +46,7 @@ async def create_item(
     firebase_uid = firebase_user["uid"]
     return await sell_crud.create_item(db, firebase_uid, request)
 
+'''
 # 出品情報取得
 @router.get("/sell", response_model=message_schema.notification)
 async def list_notifications(db: AsyncSession = Depends(get_db)):
@@ -58,3 +61,4 @@ async def list_notifications(db: AsyncSession = Depends(get_db)):
 @router.delete("/sell", response_model=message_schema.notification)
 async def list_notifications(db: AsyncSession = Depends(get_db)):
     return await crud.get_notifications(db)
+'''
