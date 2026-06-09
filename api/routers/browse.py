@@ -10,7 +10,7 @@ import api.cruds.browse as browse_crud
 router = APIRouter()
 
 # 商品一覧を取得
-@router.get("/browse", response_model=List[schema.Item])
+@router.get("/browse", response_model=List[item_schema.ListedItem])
 async def list_items(db: AsyncSession = Depends(get_db)):
     return await browse_crud.get_items(db)
 
