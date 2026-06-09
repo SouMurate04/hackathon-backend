@@ -23,6 +23,7 @@ class ListedItem(BaseModel):
 
     model_config = {
         "from_attributes": True
+    }
 
 
 # 商品(返り値)
