@@ -9,7 +9,7 @@ import api.models as model
 import api.schemas.item as item_schema
 
 async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
-    (query = select(
+    query = (select(
         model.Item.id.label("id"),
         model.Item.name.label("name"),
         model.Item.description.label("description"),
