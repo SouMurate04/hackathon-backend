@@ -29,7 +29,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> user_schema.User:
 
 
 async def update_user(db: AsyncSession, firebase_uid: str, request: user_schema.UpdatedUser):
-    user = await get_user(db, firebase_uid)
+    user = await get_user_by_firebase_uid(db, firebase_uid)
 
     user.name = request.name
     user.email = request.email
