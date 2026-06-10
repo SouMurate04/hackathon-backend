@@ -11,7 +11,7 @@ router = APIRouter()
 
 # 購入を確定
 @router.post("/buy/{item_id}", response_model=None)
-async def buy_item(item_id: int, db: AsyncSession = Depends(get_db)
+async def buy_item(item_id: int, db: AsyncSession = Depends(get_db),
     firebase_user: dict = Depends(get_current_firebase_user)):
 
     firebase_uid = firebase_user["uid"]
