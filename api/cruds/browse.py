@@ -15,6 +15,7 @@ async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
         model.Item.description.label("description"),
         model.Item.price.label("price"),
         model.Item.posted_at.label("posted_at"),
+        model.Item.buyer_id.label("buyer_id"),
         model.Category.name.label("category"),
         model.User.name.label("seller"),
         model.Image.url.label("image_url"),

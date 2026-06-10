@@ -19,6 +19,7 @@ class ListedItem(BaseModel):
     category: str
     seller: str
     posted_at: datetime
+    buyer_id: int | None = None
     tags: list[str] = []
 
     model_config = {
