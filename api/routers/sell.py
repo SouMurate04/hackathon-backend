@@ -47,6 +47,11 @@ async def create_item(
     firebase_uid = firebase_user["uid"]
     return await sell_crud.create_item(db, firebase_uid, request)
 
+# 出品情報取得
+@router.get("/sell/{user_id}", response_model=List[item_schema.ListedItem])
+async def list_notifications(user_id: int db: AsyncSession = Depends(get_db)):
+    return await sell_crud.get_CreatedItems(db, user_id)
+
 '''
 # 出品情報取得
 @router.get("/sell", response_model=message_schema.notification)

@@ -44,3 +44,9 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
     await db.commit()
     await db.refresh(item_record)
     return
+
+async def get_CreatedItems(db: AsyncSession, user_id: int):
+    result = await db.execute(
+        select(model.Item).where(model.Item.seller_id == user_id)
+    )
+    return result.scalars().all()
