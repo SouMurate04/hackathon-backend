@@ -15,13 +15,13 @@ async def create_user(db: AsyncSession, new_user: user_schema.NewUser, firebase_
     await db.refresh(record)
     return
 
-async def get_user_me(db: AsyncSession, firebase_uid: str) -> user_schema.User:
+async def get_user_by_firebase_uid(db: AsyncSession, firebase_uid: str) -> user_schema.User:
     result = await db.execute(
         select(model.User).where(model.User.firebase_uid == firebase_uid)
     )
     return result.scalars().first() 
 
-async def get_user(db: AsyncSession, user_id: int) -> user_schema.User:
+async def get_user_by_id((db: AsyncSession, user_id: int) -> user_schema.User:
     result = await db.execute(
         select(model.User).where(model.User.id == user_id)
     )
