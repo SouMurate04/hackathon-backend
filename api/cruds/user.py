@@ -21,7 +21,7 @@ async def get_user_by_firebase_uid(db: AsyncSession, firebase_uid: str) -> user_
     )
     return result.scalars().first() 
 
-async def get_user_by_id((db: AsyncSession, user_id: int) -> user_schema.User:
+async def get_user_by_id(db: AsyncSession, user_id: int) -> user_schema.User:
     result = await db.execute(
         select(model.User).where(model.User.id == user_id)
     )
