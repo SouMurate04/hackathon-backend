@@ -89,7 +89,7 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
         "tags": [],
     }
 
-    if row in rows:
+    for row in rows:
         if row["tag"] is not None:
             item["tags"].append(row["tag"])
 
