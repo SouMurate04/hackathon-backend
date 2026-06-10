@@ -70,22 +70,28 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
     )
 
     result = await db.execute(query)
-    row = result.mappings().one()
+    rows = result.mappings().all()
+
+    if not rows:
+        return None
+
+    row0 = rows[0]
 
     item = {
-        "id": row["id"],
-        "image_url": row["image_url"],
-        "name": row["name"],
-        "description": row["description"],
-        "price": row["price"],
-        "posted_at": row["posted_at"],
-        "category": row["category"],
-        "seller": row["seller"],
+        "id": row0["id"],
+        "image_url": row0["image_url"],
+        "name": row0["name"],
+        "description": row0["description"],
+        "price": row0["price"],
+        "posted_at": row0["posted_at"],
+        "category": row0["category"],
+        "seller": row0["seller"],
         "tags": [],
     }
 
-    if row["tag"] is not None:
-        item["tags"].append(row["tag"])
+    if row in rows:
+        if row["tag"] is not None:
+            item["tags"].append(row["tag"])
 
     return item_schema.ListedItem(**item)
     
