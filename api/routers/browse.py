@@ -14,6 +14,10 @@ router = APIRouter()
 async def list_items(db: AsyncSession = Depends(get_db)):
     return await browse_crud.get_items(db)
 
+@router.get("/browse/{item_id}", response_model=item_schema.ListedItem)
+async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
+    return await browse_crud.get_item(db, item_id)
+
 '''
 # レコメンド商品を取得
 @router.get("/browse/recommend", response_model=List[schema.Item])

@@ -50,4 +50,42 @@ async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
             items_by_id[item_id]["tags"].append(row["tag"])
 
     return [item_schema.ListedItem(**item) for item in items_by_id.values()]
+
+async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
+    query = (select(
+        model.Item.id.label("id"),
+        model.Item.name.label("name"),
+        model.Item.price.label("price"),
+        model.Item.description.label("description"),
+        model.Item.posted_at.label("posted_at"),
+        model.Category.name.label("category"),
+        model.User.name.label("seller"),
+        model.Image.url.label("image_url"),
+        model.Tag.name.label("tag"),
+    ).where(model.Item.id == item_id)
+        .join(model.User, model.Item.seller_id == model.User.id)
+        .outerjoin(model.Category, model.Item.category_id == model.Category.id)
+        .outerjoin(model.Image, model.Item.id == model.Image.item_id)
+        .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
+    )
+
+    result = await db.execute(query)
+    row = result.mappings().one()
+
+    item = {
+        "id": row["id"],
+        "image_url": row["image_url"],
+        "name": row["name"],
+        "description": row["description"],
+        "price": row["price"],
+        "posted_at": row["posted_at"],
+        "category": row["category"],
+        "seller": row["seller"],
+        "tags": [],
+    }
+
+    if row["tag"] is not None:
+        item["tags"].append(row["tag"])
+
+    return item_schema.ListedItem(**item)
     
