@@ -23,6 +23,7 @@ async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
         .outerjoin(model.Category, model.Item.category_id == model.Category.id)
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
+        .where(model.Item.buyer_id.is_(None))
         .order_by(model.Item.posted_at.desc()))
 
     result = await db.execute(query)
