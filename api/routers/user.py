@@ -39,7 +39,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 async def update_user(
     name: str = Form(...), email: str = Form(...),
     bio: str = Form(""), 
-    icon: UploadFile = File(...) | None = File(None), 
+    icon: UploadFile | None = File(None), 
     icon_url: str | None = Form(None),
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
