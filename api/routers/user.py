@@ -1,7 +1,7 @@
 import os
 from uuid import uuid4
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,23 +38,28 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @router.put("/user", response_model=user_schema.User)
 async def update_user(
     name: str = Form(...), email: str = Form(...),
-    bio: str = Form(""), icon: UploadFile = File(...), 
+    bio: str = Form(""), 
+    icon: UploadFile = File(...) | None = File(None), 
+    icon_url: str | None = Form(None),
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
 
-    bucket_name = os.getenv("GCS_BUCKET_NAME")
-    if not bucket_name:
-        raise HTTPException(status_code=500, detail="GCS bucket is not configured")
+    if icon is not None:
+        bucket_name = os.getenv("GCS_BUCKET_NAME")
+        if not bucket_name:
+            raise HTTPException(status_code=500, detail="GCS bucket is not configured")
 
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
 
-    object_name = f"users/{uuid4()}.{icon.filename.split('.')[-1]}"
-    blob = bucket.blob(object_name)
-    blob.upload_from_file(icon.file, content_type=icon.content_type)
-    icon_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+        object_name = f"users/{uuid4()}.{icon.filename.split('.')[-1]}"
+        blob = bucket.blob(object_name)
+        blob.upload_from_file(icon.file, content_type=icon.content_type)
+        final_icon_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+    else:
+        final_icon_url = icon_url
 
-    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=icon_url, category_id=category_id, tags=tags)
+    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=icon_url)
 
     firebase_uid = firebase_user["uid"]
     return await user_crud.update_user(db, firebase_uid, request)
