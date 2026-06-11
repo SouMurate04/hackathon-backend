@@ -1,9 +1,12 @@
+from uuid import uuid4
+
 from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db import get_db
 from api.firebase_auth import get_current_firebase_user
+from google.cloud import storage
 
 import api.schemas.user as user_schema
 import api.cruds.user as user_crud
@@ -32,8 +35,25 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 # ユーザー情報を更新
 @router.put("/user", response_model=user_schema.User)
-async def update_user(request: user_schema.UpdatedUser, db: AsyncSession = Depends(get_db),
-    firebase_user: dict = Depends(get_current_firebase_user)):
+async def update_user(
+    name: str = Form(...), email: str = Form(...),
+    bio: str = Form(""), icon: UploadFile = File(...), 
+    db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
+    ):
+
+    bucket_name = os.getenv("GCS_BUCKET_NAME")
+    if not bucket_name:
+        raise HTTPException(status_code=500, detail="GCS bucket is not configured")
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+
+    object_name = f"users/{uuid4()}.{icon.filename.split('.')[-1]}"
+    blob = bucket.blob(object_name)
+    blob.upload_from_file(icon.file, content_type=icon.content_type)
+    icon_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+
+    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=icon_url, category_id=category_id, tags=tags)
 
     firebase_uid = firebase_user["uid"]
     return await user_crud.update_user(db, firebase_uid, request)
