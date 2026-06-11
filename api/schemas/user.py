@@ -15,8 +15,8 @@ class User(BaseModel):
     firebase_uid: str
     name: str
     email: str
-    icon_url: str
-    bio: str
+    icon_url: str | None = None
+    bio: str | None = None
 
     model_config = {
         "from_attributes": True
