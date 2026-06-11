@@ -6,8 +6,8 @@ class NewUser(BaseModel):
 class UpdatedUser(BaseModel):
     name: str
     email: str
-    icon_url: str
-    bio: str
+    icon_url: str | None = None
+    bio: str | None = None
 
 
 class User(BaseModel):
