@@ -11,6 +11,8 @@ class User(Base):
     firebase_uid = Column(String(255), nullable=False, unique=True)
     name = Column(String(255))
     email = Column(String(255), nullable=False, unique=True)
+    icon_url = Column(String(255))
+    bio = Column(String(255))
 
 # 商品
 class Item(Base):
