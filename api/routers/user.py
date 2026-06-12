@@ -59,7 +59,7 @@ async def update_user(
     else:
         final_icon_url = icon_url
 
-    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=icon_url)
+    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=final_icon_url)
 
     firebase_uid = firebase_user["uid"]
     return await user_crud.update_user(db, firebase_uid, request)
