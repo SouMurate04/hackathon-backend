@@ -1,0 +1,31 @@
+{
+  "model_type": "logistic_regression_item_pair_v1",
+  "dataset": "mercari-us/merrec",
+  "split": "train",
+  "features": [
+    "same_c0",
+    "same_c1",
+    "price_diff"
+  ],
+  "price_diff_definition": "abs(log1p(price_a) - log1p(price_b))",
+  "parameters": {
+    "bias": -0.8319954361970866,
+    "weights": {
+      "same_c0": 1.766507836136226,
+      "same_c1": 2.7782265827198036,
+      "price_diff": -0.4320885968483258
+    }
+  },
+  "training": {
+    "rows_scanned": 500000,
+    "items_collected": 360091,
+    "sessions_collected": 94768,
+    "positive_pairs": 50000,
+    "negative_pairs": 50000,
+    "epochs": 10,
+    "learning_rate": 0.05,
+    "l2": 0.0001,
+    "negative_ratio": 1,
+    "seed": 42
+  }
+}
