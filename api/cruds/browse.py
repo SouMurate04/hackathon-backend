@@ -94,14 +94,14 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
         .where(model.Item.buyer_id.is_(None))
-        .order_by(model.Item.posted_at.desc())
+        .where(model.Item.id == item_id)
     )
 
     result = await db.execute(query)
     rows = result.mappings().all()
 
     if not rows:
-        return None
+        raise HTTPException(status_code=404, detail="Item not found")
 
     row0 = rows[0]
 
