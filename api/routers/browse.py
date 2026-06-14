@@ -18,14 +18,13 @@ async def list_items(db: AsyncSession = Depends(get_db)):
 async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
     return await browse_crud.get_item(db, item_id)
 
-'''
-# レコメンド商品を取得
-@router.get("/browse/recommend", response_model=List[schema.Item])
-async def list_recommended_items(db: AsyncSession = Depends(get_db)):
-    return await crud.get_recommended_items_list(db)
-
-# 個別ページを取得
-@router.get("/browse/item", response_model=schema.Item)
-async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
-    return await crud.get_item(db, item_id)
-'''
+@router.get(
+    "/browse/{item_id}/recommendations",
+    response_model=List[item_schema.ListedItem],
+)
+async def get_recommended_items(
+    item_id: int,
+    limit: int = 4,
+    db: AsyncSession = Depends(get_db),
+):
+    return await browse_crud.get_recommended_items(db, item_id, limit)
