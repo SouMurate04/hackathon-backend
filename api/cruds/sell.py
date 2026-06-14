@@ -1,5 +1,7 @@
+from fastapi import HTTPException
+
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -58,6 +60,7 @@ async def get_CreatedItems(db: AsyncSession, user_id: int):
             model.Item.description.label("description"),
             model.Item.price.label("price"),
             model.Item.posted_at.label("posted_at"),
+            model.Item.seller_id.label("seller_id"),
             model.Item.buyer_id.label("buyer_id"),
             model.Item.c0_id.label("c0_id"),
             model.Item.c1_id.label("c1_id"),
@@ -92,6 +95,7 @@ async def get_CreatedItems(db: AsyncSession, user_id: int):
                 "description": row["description"],
                 "price": row["price"],
                 "posted_at": row["posted_at"],
+                "seller_id": row["seller_id"],
                 "buyer_id": row["buyer_id"],
                 "c0_id": row["c0_id"],
                 "c1_id": row["c1_id"],
@@ -105,3 +109,104 @@ async def get_CreatedItems(db: AsyncSession, user_id: int):
             items_by_id[item_id]["tags"].append(row["tag"])
 
     return [item_schema.ListedItem(**item) for item in items_by_id.values()]
+
+async def get_user_by_firebase_uid(db: AsyncSession, firebase_uid: str):
+    result = await db.execute(
+        select(model.User).where(model.User.firebase_uid == firebase_uid)
+    )
+    return result.scalars().first()
+
+async def update_item(
+    db: AsyncSession,
+    item_id: int,
+    firebase_uid: str,
+    name: str,
+    price: int,
+    description: str,
+    c0_id: int,
+    c1_id: int,
+    tags: list[str],
+    image_url: str | None,
+):
+    seller = await get_user_by_firebase_uid(db, firebase_uid)
+
+    if seller is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    result = await db.execute(
+        select(model.Item).where(model.Item.id == item_id)
+    )
+    item = result.scalars().first()
+
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if item.seller_id != seller.id:
+        raise HTTPException(status_code=403, detail="You are not the seller")
+
+    if item.buyer_id is not None:
+        raise HTTPException(status_code=400, detail="Sold item cannot be edited")
+
+    item.name = name
+    item.price = price
+    item.description = description
+    item.c0_id = c0_id
+    item.c1_id = c1_id
+
+    if image_url is not None:
+        image_result = await db.execute(
+            select(model.Image).where(model.Image.item_id == item_id)
+        )
+        image = image_result.scalars().first()
+
+        if image is None:
+            db.add(model.Image(item_id=item_id, url=image_url))
+        else:
+            image.url = image_url
+
+    await db.execute(
+        delete(model.Tag).where(model.Tag.item_id == item_id)
+    )
+
+    for tag in tags:
+        if tag:
+            db.add(model.Tag(item_id=item_id, name=tag))
+
+    await db.commit()
+
+    return {"updated": True}
+
+async def delete_item(
+    db: AsyncSession,
+    item_id: int,
+    firebase_uid: str,
+):
+    seller = await get_user_by_firebase_uid(db, firebase_uid)
+
+    if seller is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    result = await db.execute(
+        select(model.Item).where(model.Item.id == item_id)
+    )
+    item = result.scalars().first()
+
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if item.seller_id != seller.id:
+        raise HTTPException(status_code=403, detail="You are not the seller")
+
+    if item.buyer_id is not None:
+        raise HTTPException(status_code=400, detail="Sold item cannot be deleted")
+
+    await db.execute(delete(model.Like).where(model.Like.item_id == item_id))
+    await db.execute(delete(model.Image).where(model.Image.item_id == item_id))
+    await db.execute(delete(model.Tag).where(model.Tag.item_id == item_id))
+    await db.execute(delete(model.Chat).where(model.Chat.item_id == item_id))
+    await db.execute(delete(model.Notification).where(model.Notification.item_id == item_id))
+    await db.execute(delete(model.Item).where(model.Item.id == item_id))
+
+    await db.commit()
+
+    return {"deleted": True}

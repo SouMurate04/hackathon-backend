@@ -28,7 +28,7 @@ async def create_item(
     name: str = Form(...), price: int = Form(...),
     description: str = Form(""), image: UploadFile = File(...), 
     c0_id: int = Form(...), c1_id: int = Form(...),
-    ags: List[str] = Form([]),
+    tags: List[str] = Form([]),
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
 
@@ -59,6 +59,59 @@ async def create_item(
 @router.get("/sell/{user_id}", response_model=List[item_schema.ListedItem])
 async def list_notifications(user_id: int, db: AsyncSession = Depends(get_db)):
     return await sell_crud.get_CreatedItems(db, user_id)
+
+@router.put("/sell/{item_id}", response_model=None)
+async def update_item(
+    item_id: int,
+    name: str = Form(...),
+    price: int = Form(...),
+    description: str = Form(""),
+    c0_id: int = Form(...),
+    c1_id: int = Form(...),
+    tags: List[str] = Form([]),
+    image: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    image_url = None
+
+    if image is not None:
+        bucket_name = os.getenv("GCS_BUCKET_NAME")
+        if not bucket_name:
+            raise HTTPException(status_code=500, detail="GCS bucket is not configured")
+
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
+        blob = bucket.blob(object_name)
+        blob.upload_from_file(image.file, content_type=image.content_type)
+        image_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+
+    firebase_uid = firebase_user["uid"]
+
+    return await sell_crud.update_item(
+        db=db,
+        item_id=item_id,
+        firebase_uid=firebase_uid,
+        name=name,
+        price=price,
+        description=description,
+        c0_id=c0_id,
+        c1_id=c1_id,
+        tags=tags,
+        image_url=image_url,
+    )
+
+
+@router.delete("/sell/{item_id}", response_model=None)
+async def delete_item(
+    item_id: int,
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    firebase_uid = firebase_user["uid"]
+    return await sell_crud.delete_item(db, item_id, firebase_uid)
 
 '''
 # 出品情報取得

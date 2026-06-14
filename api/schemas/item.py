@@ -21,6 +21,7 @@ class ListedItem(BaseModel):
     c1_id: int | None = None
     c0_name: str | None = None
     c1_name: str | None = None
+    seller_id: int
     seller: str
     posted_at: datetime
     buyer_id: int | None = None
