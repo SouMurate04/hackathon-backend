@@ -94,7 +94,6 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
         .outerjoin(CategoryC1, model.Item.c1_id == CategoryC1.id)
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
-        .where(model.Item.buyer_id.is_(None))
         .where(model.Item.id == item_id)
     )
 
