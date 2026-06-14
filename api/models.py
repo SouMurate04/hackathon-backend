@@ -32,7 +32,7 @@ class Item(Base):
 # いいね(ジャンクション)
 class Like(Base):
     __tablename__ = "likes"
-    __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_likes_item_user"))
+    __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_likes_item_user"),)
 
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
