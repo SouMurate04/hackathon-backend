@@ -7,7 +7,8 @@ class NewItem(BaseModel):
     description: str
     price: int
     image_url: str
-    category_id: int
+    c0_id: int
+    c1_id: int
     tags: list[str] = []
 
 class ListedItem(BaseModel):
@@ -16,7 +17,10 @@ class ListedItem(BaseModel):
     description: str
     price: int
     image_url: str
-    category: str
+    c0_id: int | None = None
+    c1_id: int | None = None
+    c0_name: str | None = None
+    c1_name: str | None = None
     seller: str
     posted_at: datetime
     buyer_id: int | None = None

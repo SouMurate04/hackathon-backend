@@ -22,7 +22,8 @@ class Item(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     price = Column(Integer, nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"))
+    c0_id = Column(Integer, ForeignKey("categories.id"))
+    c1_id = Column(Integer, ForeignKey("categories.id"))
     seller_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     buyer_id = Column(Integer, ForeignKey("users.id"))
     posted_at = Column(DateTime, nullable=False)
@@ -50,7 +51,9 @@ class Category(Base):
     __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)
+    parent_id = Column(Integer, ForeignKey("categories.id"))
+    level = Column(Integer, nullable=False)
+    name = Column(String(255), nullable=False)
 
 # タグ(ジャンクション)
 class Tag(Base):

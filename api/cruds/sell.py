@@ -18,7 +18,8 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
         name=new_item.name,
         description=new_item.description,
         price=new_item.price,
-        category_id=new_item.category_id,
+        c0_id=new_item.c0_id,
+        c1_id=new_item.c1_id,
         seller_id=seller.id,
         posted_at=datetime.now()
     )
