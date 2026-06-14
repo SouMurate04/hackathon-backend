@@ -32,11 +32,11 @@ class Item(Base):
 # いいね(ジャンクション)
 class Like(Base):
     __tablename__ = "likes"
+    __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_likes_item_user"))
 
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"),nullable=False )
-    UniqueConstraint("item_id", "user_id")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
 # 画像(ジャンクション)
 class Image(Base):
