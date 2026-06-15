@@ -144,7 +144,7 @@ async def generate_introduction(
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash",
             contents=[
                 types.Part.from_bytes(
                     data=image_bytes,
