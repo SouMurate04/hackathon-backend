@@ -80,5 +80,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("items.id"))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     timestamp = Column(DateTime, nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False)

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 import api.models as model
 import api.schemas.item as item_schema
+import api.cruds.notification as notification_crud
 
 async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str):
     user_ret = await db.execute(
@@ -28,6 +29,33 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str):
 
     item.buyer_id = buyer.id
     item.bought_at = datetime.now()
+
+    await notification_crud.create_notification(
+        db=db,
+        user_id=item.seller_id,
+        item_id=item.id,
+        title="商品が購入されました",
+        message=f"あなたが出品した「{item.name}」が購入されました。",
+    )
+
+    like_result = await db.execute(
+        select(model.Like.user_id).where(model.Like.item_id == item.id)
+    )
+    liked_user_ids = {row[0] for row in like_result.all()}
+
+    for liked_user_id in liked_user_ids:
+        if liked_user_id == buyer.id:
+            continue
+        if liked_user_id == item.seller_id:
+            continue
+
+        await notification_crud.create_notification(
+            db=db,
+            user_id=liked_user_id,
+            item_id=item.id,
+            title="いいねした商品が購入されました",
+            message=f"いいねしていた「{item.name}」が他のユーザーに購入されました。",
+        )
 
     await db.commit()
     await db.refresh(item)

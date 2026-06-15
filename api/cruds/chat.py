@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import api.models as model
 import api.schemas.chat as chat_schema
+import api.cruds.notification as notification_crud
 
 
 async def create_message(
@@ -42,6 +43,23 @@ async def create_message(
         message=request.message.strip(),
         timestamp=datetime.now(),
     )
+
+    participant_result = await db.execute(
+        select(model.Chat.user_id).where(model.Chat.item_id == request.item_id)
+    )
+    participant_user_ids = {row[0] for row in participant_result.all()}
+
+    notification_user_ids = participant_user_ids | {item.seller_id}
+    notification_user_ids.discard(user_id)
+
+    for notification_user_id in notification_user_ids:
+        await notification_crud.create_notification(
+            db=db,
+            user_id=notification_user_id,
+            item_id=item.id,
+            title="チャットに新しいメッセージがあります",
+            message=f"「{item.name}」のチャットに新しいメッセージが投稿されました。",
+        )
 
     db.add(chat)
     await db.commit()

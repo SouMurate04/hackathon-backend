@@ -7,6 +7,7 @@ from sqlalchemy.orm import aliased
 
 import api.models as model
 import api.schemas.item as item_schema
+import api.cruds.notification as notification_crud
 
 async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema.NewItem):
     result = await db.execute(
@@ -199,6 +200,23 @@ async def delete_item(
 
     if item.buyer_id is not None:
         raise HTTPException(status_code=400, detail="Sold item cannot be deleted")
+
+    like_result = await db.execute(
+        select(model.Like.user_id).where(model.Like.item_id == item.id)
+    )
+    liked_user_ids = {row[0] for row in like_result.all()}
+
+    for liked_user_id in liked_user_ids:
+        if liked_user_id == seller.id:
+            continue
+
+        await notification_crud.create_notification(
+            db=db,
+            user_id=liked_user_id,
+            item_id=item.id,
+            title="いいねした商品の出品が取り下げられました",
+            message=f"いいねしていた「{item.name}」の出品が取り下げられました。",
+        )
 
     await db.execute(delete(model.Like).where(model.Like.item_id == item_id))
     await db.execute(delete(model.Image).where(model.Image.item_id == item_id))
