@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from api.routers import user, sell, browse, buy, category, like
+from api.routers import user, sell, browse, buy, category, like, chat
 
 app = FastAPI()
 
@@ -25,8 +25,8 @@ app.include_router(browse.router)
 app.include_router(buy.router)
 app.include_router(category.router)
 app.include_router(like.router)
-'''
 app.include_router(chat.router)
+'''
 app.include_router(notify.router)
 '''
 
