@@ -50,3 +50,5 @@ class Item(BaseModel):
 class GeneratedIntroduction(BaseModel):
     name: str
     description: str
+    c0_id: int
+    c1_id: int

@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.db import get_db
 from api.firebase_auth import get_current_firebase_user
 
+from sqlalchemy import select
+import api.models as model
 import api.schemas.item as item_schema
 import api.cruds.sell as sell_crud
 
@@ -112,6 +114,7 @@ async def delete_item(
 @router.post("/sell/recommend", response_model=item_schema.GeneratedIntroduction)
 async def generate_introduction(
     image: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
 ):
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Image file is required")
@@ -129,9 +132,16 @@ async def generate_introduction(
         location=LOCATION
     )
 
-    prompt = """
-            あなたはフリマアプリの出品文作成アシスタントです。
-            画像の商品を見て、商品名と紹介文を日本語で作成してください。
+    prompt = f"""
+            あなたはフリマアプリの出品補助AIです。
+            画像の商品を見て、商品名、商品紹介文、大カテゴリ、小カテゴリを推測してください。
+
+            カテゴリは必ず以下の一覧から選んでください。
+            存在しないカテゴリ名やIDを作ってはいけません。
+            小カテゴリは、必ず選んだ大カテゴリのchildrenから選んでください。
+
+            カテゴリ一覧:
+            {json.dumps(category_tree, ensure_ascii=False)}
 
             条件:
             - 商品名は短く自然にする
@@ -139,8 +149,47 @@ async def generate_introduction(
             - 画像から分からないブランド名、型番、状態、サイズは断定しない
             - 誇大表現は避ける
             - 必ずJSONのみを返す
-            - JSONの形式は {"name": "...", "description": "..."} にする
+            - JSONの形式は以下にする
+            {{
+            "name": "...",
+            "description": "...",
+            "c0_id": 1,
+            "c1_id": 10
+            }}
             """
+
+    category_result = await db.execute(
+        select(model.Category).order_by(model.Category.level, model.Category.id)
+    )
+    category_rows = category_result.scalars().all()
+
+    c0_categories = [
+        category for category in category_rows
+        if category.level == 0
+    ]
+
+    c1_categories = [
+        category for category in category_rows
+        if category.level == 1
+    ]
+
+    category_tree = []
+
+    for c0 in c0_categories:
+        children = [
+            {
+                "id": c1.id,
+                "name": c1.name,
+            }
+            for c1 in c1_categories
+            if c1.parent_id == c0.id
+        ]
+
+        category_tree.append({
+            "id": c0.id,
+            "name": c0.name,
+            "children": children,
+        })
 
     try:
         response = client.models.generate_content(
@@ -152,9 +201,35 @@ async def generate_introduction(
                 ),
                 prompt,
             ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
         )
 
-        text = response.text.strip()
+        data = json.loads(response.text)
+
+        c0_id = data["c0_id"]
+        c1_id = data["c1_id"]
+
+        valid_c0_ids = {c0["id"] for c0 in category_tree}
+        valid_c1_pairs = {
+            (c0["id"], c1["id"])
+            for c0 in category_tree
+            for c1 in c0["children"]
+        }
+
+        if c0_id not in valid_c0_ids:
+            raise HTTPException(status_code=500, detail="Gemini returned invalid c0_id")
+
+        if (c0_id, c1_id) not in valid_c1_pairs:
+            raise HTTPException(status_code=500, detail="Gemini returned invalid c1_id")
+
+        return item_schema.GeneratedIntroduction(
+            name=data["name"],
+            description=data["description"],
+            c0_id=c0_id,
+            c1_id=c1_id,
+        )
 
         # 念のため Markdown コードブロックを除去
         if text.startswith("```"):
