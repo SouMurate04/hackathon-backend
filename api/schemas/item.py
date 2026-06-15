@@ -46,3 +46,7 @@ class Item(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class GeneratedIntroduction(BaseModel):
+    name: str
+    description: str

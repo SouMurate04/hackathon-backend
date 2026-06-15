@@ -1,23 +1,11 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from google import genai
-from google.genai import types
 from pydantic import BaseModel
 
 from api.routers import user, sell, browse, buy, category, like, chat
 
 app = FastAPI()
-
-'''
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
-LOCATION = "us-central1"
-client = genai.Client(
-    vertexai=True,
-    project=PROJECT_ID,
-    location=LOCATION
-)
-'''
 
 app.include_router(user.router)
 app.include_router(sell.router)
@@ -47,24 +35,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-'''
-@app.get("/")
-def root():
-    return {"message": "Hello FastAPI"}
-
-class ChatRequest(BaseModel):
-    message: str
-
-@app.post("/chat")
-async def chat_with_gemini(request: ChatRequest):
-    try:
-        # Vertex AI経由のGeminiモデルを指定（例: gemini-2.5-flash）
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=request.message,
-        )
-        return {"response": response.text}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-'''
