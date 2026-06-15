@@ -32,9 +32,13 @@ async def create_message(
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message is empty")
 
+    user_id = user.id
+    user_name = user.name
+    user_icon_url = user.icon_url
+
     chat = model.Chat(
         item_id=request.item_id,
-        user_id=user.id,
+        user_id=user_id,
         message=request.message.strip(),
         timestamp=datetime.now(),
     )
@@ -46,9 +50,9 @@ async def create_message(
     return {
         "id": chat.id,
         "item_id": chat.item_id,
-        "user_id": chat.user_id,
-        "user_name": user.name,
-        "user_icon_url": user.icon_url,
+        "user_id": user_id,
+        "user_name": user_name,
+        "user_icon_url": user_icon_url,
         "message": chat.message,
         "timestamp": chat.timestamp,
     }
