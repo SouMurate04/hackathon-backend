@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from api.routers import user, sell, browse, buy, category, like, chat, notification
+from api.routers import user, sell, browse, buy, category, like, chat, notification, follow
 
 app = FastAPI()
 
@@ -15,6 +15,7 @@ app.include_router(category.router)
 app.include_router(like.router)
 app.include_router(chat.router)
 app.include_router(notification.router)
+app.include_router(follow.router)
 
 WEB_URL = os.getenv("WEB_URL")
 allow_origins = [

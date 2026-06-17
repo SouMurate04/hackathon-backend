@@ -45,6 +45,13 @@ async def get_popular_tags(
 ):
     return await browse_crud.get_popular_tags(db, limit)
 
+@router.get("/browse/subscription", response_model=List[item_schema.ListedItem])
+async def get_subscription_items(
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    return await browse_crud.get_subscription_items(db, firebase_user["uid"])
+
 @router.get("/browse/{item_id}", response_model=item_schema.ListedItem)
 async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
     return await browse_crud.get_item(db, item_id)

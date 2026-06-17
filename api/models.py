@@ -84,3 +84,14 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     timestamp = Column(DateTime, nullable=False)
     is_read = Column(Boolean, nullable=False, default=False)
+
+# フォロー関係
+class Follow(Base):
+    __tablename__ = "follows"
+    __table_args__ = (
+        UniqueConstraint("followee_id", "follower_id", name="uq_follows_followee_follower"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    followee_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)
