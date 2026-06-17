@@ -132,32 +132,6 @@ async def generate_introduction(
         location=LOCATION
     )
 
-    prompt = f"""
-            あなたはフリマアプリの出品補助AIです。
-            画像の商品を見て、商品名、商品紹介文、大カテゴリ、小カテゴリを推測してください。
-
-            カテゴリは必ず以下の一覧から選んでください。
-            存在しないカテゴリ名やIDを作ってはいけません。
-            小カテゴリは、必ず選んだ大カテゴリのchildrenから選んでください。
-
-            カテゴリ一覧:
-            {json.dumps(category_tree, ensure_ascii=False)}
-
-            条件:
-            - 商品名は短く自然にする
-            - 紹介文は80〜150文字程度
-            - 画像から分からないブランド名、型番、状態、サイズは断定しない
-            - 誇大表現は避ける
-            - 必ずJSONのみを返す
-            - JSONの形式は以下にする
-            {{
-            "name": "...",
-            "description": "...",
-            "c0_id": 1,
-            "c1_id": 10
-            }}
-            """
-
     category_result = await db.execute(
         select(model.Category).order_by(model.Category.level, model.Category.id)
     )
@@ -190,6 +164,32 @@ async def generate_introduction(
             "name": c0.name,
             "children": children,
         })
+
+     prompt = f"""
+            あなたはフリマアプリの出品補助AIです。
+            画像の商品を見て、商品名、商品紹介文、大カテゴリ、小カテゴリを推測してください。
+
+            カテゴリは必ず以下の一覧から選んでください。
+            存在しないカテゴリ名やIDを作ってはいけません。
+            小カテゴリは、必ず選んだ大カテゴリのchildrenから選んでください。
+
+            カテゴリ一覧:
+            {json.dumps(category_tree, ensure_ascii=False)}
+
+            条件:
+            - 商品名は短く自然にする
+            - 紹介文は80〜150文字程度
+            - 画像から分からないブランド名、型番、状態、サイズは断定しない
+            - 誇大表現は避ける
+            - 必ずJSONのみを返す
+            - JSONの形式は以下にする
+            {{
+            "name": "...",
+            "description": "...",
+            "c0_id": 1,
+            "c1_id": 10
+            }}
+            """
 
     try:
         response = client.models.generate_content(
