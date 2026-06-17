@@ -201,7 +201,14 @@ async def search_items(
 ) -> List[item_schema.ListedItem]:
     normal_keywords, tag_keywords = parse_search_words(keyword or "")
 
-    if not normal_keywords and not tag_keywords:
+    has_filter = (
+        c0_id is not None
+        or c1_id is not None
+        or min_price is not None
+        or max_price is not None
+    )
+
+    if not normal_keywords and not tag_keywords and not has_filter:
         return await get_items(db)
 
     CategoryC0 = aliased(model.Category)
