@@ -193,9 +193,13 @@ async def get_recommended_items(
 
 async def search_items(
     db: AsyncSession,
-    keyword: str,
+    keyword: str | None = None,
+    c0_id: int | None = None,
+    c1_id: int | None = None,
+    min_price: int | None = None,
+    max_price: int | None = None,
 ) -> List[item_schema.ListedItem]:
-    normal_keywords, tag_keywords = parse_search_words(keyword)
+    normal_keywords, tag_keywords = parse_search_words(keyword or "")
 
     if not normal_keywords and not tag_keywords:
         return await get_items(db)
@@ -226,8 +230,21 @@ async def search_items(
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
         .where(model.Item.buyer_id.is_(None))
-        .order_by(model.Item.posted_at.desc())
     )
+
+    if c0_id is not None:
+        query = query.where(model.Item.c0_id == c0_id)
+
+    if c1_id is not None:
+        query = query.where(model.Item.c1_id == c1_id)
+
+    if min_price is not None:
+        query = query.where(model.Item.price >= min_price)
+
+    if max_price is not None:
+        query = query.where(model.Item.price <= max_price)
+
+    query = query.order_by(model.Item.posted_at.desc())
 
     result = await db.execute(query)
     rows = result.mappings().all()

@@ -13,12 +13,20 @@ router = APIRouter()
 @router.get("/browse", response_model=List[item_schema.ListedItem])
 async def list_items(
     keyword: str | None = Query(None),
+    c0_id: int | None = Query(None),
+    c1_id: int | None = Query(None),
+    min_price: int | None = Query(None),
+    max_price: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    if keyword:
-        return await browse_crud.search_items(db, keyword)
-
-    return await browse_crud.get_items(db)
+    return await browse_crud.search_items(
+        db=db,
+        keyword=keyword,
+        c0_id=c0_id,
+        c1_id=c1_id,
+        min_price=min_price,
+        max_price=max_price,
+    )
 
 @router.get("/browse/popular-tags")
 async def get_popular_tags(
