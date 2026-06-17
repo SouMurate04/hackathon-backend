@@ -30,6 +30,9 @@ async def create_item(
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
 
+    if len(tags) > 10:
+        raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
+
     bucket_name = os.getenv("GCS_BUCKET_NAME")
     if not bucket_name:
         raise HTTPException(status_code=500, detail="GCS bucket is not configured")
@@ -71,6 +74,9 @@ async def update_item(
     db: AsyncSession = Depends(get_db),
     firebase_user: dict = Depends(get_current_firebase_user),
 ):
+
+    if len(tags) > 10:
+        raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
     image_url = None
 
     if image is not None:
