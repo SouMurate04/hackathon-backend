@@ -10,6 +10,13 @@ import api.models as model
 import api.schemas.item as item_schema
 from api.recommender import calc_recommend_score
 
+def normalize_keywords(keyword: str) -> list[str]:
+    return [
+        word.strip().lower()
+        for word in keyword.split(" ")
+        if word.strip()
+    ]
+
 async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
     CategoryC0 = aliased(model.Category)
     CategoryC1 = aliased(model.Category)
@@ -174,4 +181,87 @@ async def get_recommended_items(
         for item_id in recommended_ids
         if item_id in item_by_id
     ]
+
+async def search_items(
+    db: AsyncSession,
+    keyword: str,
+) -> List[item_schema.ListedItem]:
+    keywords = normalize_keywords(keyword)
+
+    if not keywords:
+        return await get_items(db)
+
+    CategoryC0 = aliased(model.Category)
+    CategoryC1 = aliased(model.Category)
+
+    query = (
+        select(
+            model.Item.id.label("id"),
+            model.Item.name.label("name"),
+            model.Item.description.label("description"),
+            model.Item.price.label("price"),
+            model.Item.posted_at.label("posted_at"),
+            model.Item.seller_id.label("seller_id"),
+            model.Item.buyer_id.label("buyer_id"),
+            model.Item.c0_id.label("c0_id"),
+            model.Item.c1_id.label("c1_id"),
+            CategoryC0.name.label("c0_name"),
+            CategoryC1.name.label("c1_name"),
+            model.User.name.label("seller"),
+            model.Image.url.label("image_url"),
+            model.Tag.name.label("tag"),
+        )
+        .join(model.User, model.Item.seller_id == model.User.id)
+        .outerjoin(CategoryC0, model.Item.c0_id == CategoryC0.id)
+        .outerjoin(CategoryC1, model.Item.c1_id == CategoryC1.id)
+        .outerjoin(model.Image, model.Item.id == model.Image.item_id)
+        .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
+        .where(model.Item.buyer_id.is_(None))
+        .order_by(model.Item.posted_at.desc())
+    )
+
+    result = await db.execute(query)
+    rows = result.mappings().all()
+
+    items_by_id = {}
+
+    for row in rows:
+        item_id = row["id"]
+
+        if item_id not in items_by_id:
+            items_by_id[item_id] = {
+                "id": row["id"],
+                "image_url": row["image_url"],
+                "name": row["name"],
+                "description": row["description"],
+                "price": row["price"],
+                "posted_at": row["posted_at"],
+                "seller_id": row["seller_id"],
+                "buyer_id": row["buyer_id"],
+                "c0_id": row["c0_id"],
+                "c1_id": row["c1_id"],
+                "c0_name": row["c0_name"],
+                "c1_name": row["c1_name"],
+                "seller": row["seller"],
+                "tags": [],
+            }
+
+        if row["tag"] is not None:
+            items_by_id[item_id]["tags"].append(row["tag"])
+
+    matched_items = []
+
+    for item in items_by_id.values():
+        searchable_text = " ".join([
+            item["name"] or "",
+            item["description"] or "",
+            item["c0_name"] or "",
+            item["c1_name"] or "",
+            " ".join(item["tags"]),
+        ]).lower()
+
+        if all(word in searchable_text for word in keywords):
+            matched_items.append(item_schema.ListedItem(**item))
+
+    return matched_items
     

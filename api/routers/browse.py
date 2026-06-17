@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db import get_db
@@ -11,7 +11,13 @@ router = APIRouter()
 
 # 商品一覧を取得
 @router.get("/browse", response_model=List[item_schema.ListedItem])
-async def list_items(db: AsyncSession = Depends(get_db)):
+async def list_items(
+    keyword: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    if keyword:
+        return await browse_crud.search_items(db, keyword)
+
     return await browse_crud.get_items(db)
 
 @router.get("/browse/{item_id}", response_model=item_schema.ListedItem)
