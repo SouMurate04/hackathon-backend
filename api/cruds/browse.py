@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from typing import List
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -10,12 +10,21 @@ import api.models as model
 import api.schemas.item as item_schema
 from api.recommender import calc_recommend_score
 
-def normalize_keywords(keyword: str) -> list[str]:
-    return [
-        word.strip().lower()
-        for word in keyword.split(" ")
-        if word.strip()
-    ]
+def parse_search_words(keyword: str) -> tuple[list[str], list[str]]:
+    normal_keywords = []
+    tag_keywords = []
+
+    for word in keyword.split(" "):
+        word = word.strip()
+        if not word:
+            continue
+
+        if word.startswith("#") and len(word) > 1:
+            tag_keywords.append(word[1:].lower())
+        else:
+            normal_keywords.append(word.lower())
+
+    return normal_keywords, tag_keywords
 
 async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
     CategoryC0 = aliased(model.Category)
@@ -186,9 +195,9 @@ async def search_items(
     db: AsyncSession,
     keyword: str,
 ) -> List[item_schema.ListedItem]:
-    keywords = normalize_keywords(keyword)
+    normal_keywords, tag_keywords = parse_search_words(keyword)
 
-    if not keywords:
+    if not normal_keywords and not tag_keywords:
         return await get_items(db)
 
     CategoryC0 = aliased(model.Category)
@@ -252,6 +261,8 @@ async def search_items(
     matched_items = []
 
     for item in items_by_id.values():
+        item_tags = [tag.lower() for tag in item["tags"]]
+
         searchable_text = " ".join([
             item["name"] or "",
             item["description"] or "",
@@ -260,8 +271,35 @@ async def search_items(
             " ".join(item["tags"]),
         ]).lower()
 
-        if all(word in searchable_text for word in keywords):
+        matches_normal_keywords = all(
+            word in searchable_text
+            for word in normal_keywords
+        )
+
+        matches_tag_keywords = all(
+            tag in item_tags
+            for tag in tag_keywords
+        )
+
+        if matches_normal_keywords and matches_tag_keywords:
             matched_items.append(item_schema.ListedItem(**item))
 
     return matched_items
     
+async def get_popular_tags(
+    db: AsyncSession,
+    limit: int = 10,
+):
+    result = await db.execute(
+        select(
+            model.Tag.name.label("name"),
+            func.count(model.Tag.id).label("count"),
+        )
+        .join(model.Item, model.Tag.item_id == model.Item.id)
+        .where(model.Item.buyer_id.is_(None))
+        .group_by(model.Tag.name)
+        .order_by(func.count(model.Tag.id).desc())
+        .limit(limit)
+    )
+
+    return result.mappings().all()

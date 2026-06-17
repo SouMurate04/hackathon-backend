@@ -20,6 +20,13 @@ async def list_items(
 
     return await browse_crud.get_items(db)
 
+@router.get("/browse/popular-tags")
+async def get_popular_tags(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    return await browse_crud.get_popular_tags(db, limit)
+
 @router.get("/browse/{item_id}", response_model=item_schema.ListedItem)
 async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
     return await browse_crud.get_item(db, item_id)
