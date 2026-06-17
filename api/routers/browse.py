@@ -28,6 +28,16 @@ async def list_items(
         max_price=max_price,
     )
 
+@router.post(
+    "/browse/ai-recommendation",
+    response_model=item_schema.AIRecommendationResponse,
+)
+async def ai_recommendation(
+    request: item_schema.AIRecommendationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await browse_crud.get_ai_recommendation(db, request)
+
 @router.get("/browse/popular-tags")
 async def get_popular_tags(
     limit: int = 10,

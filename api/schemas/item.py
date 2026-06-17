@@ -52,3 +52,23 @@ class GeneratedIntroduction(BaseModel):
     description: str
     c0_id: int
     c1_id: int
+
+class AIRecommendationRequest(BaseModel):
+    question: str
+    use_filter: bool = False
+    keyword: str | None = None
+    c0_id: int | None = None
+    c1_id: int | None = None
+    min_price: int | None = None
+    max_price: int | None = None
+
+
+class AIRecommendedItem(BaseModel):
+    item_id: int
+    reason: str
+
+
+class AIRecommendationResponse(BaseModel):
+    answer: str
+    items: list[ListedItem]
+    reasons: dict[int, str]

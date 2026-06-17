@@ -1,3 +1,8 @@
+import json
+import os
+from google import genai
+from google.genai import types
+
 from fastapi import HTTPException
 from typing import List
 
@@ -327,3 +332,122 @@ async def get_popular_tags(
     )
 
     return result.mappings().all()
+
+async def get_ai_recommendation(
+    db: AsyncSession,
+    request: item_schema.AIRecommendationRequest,
+) -> item_schema.AIRecommendationResponse:
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question is empty")
+
+    if request.use_filter:
+        candidates = await search_items(
+            db=db,
+            keyword=request.keyword,
+            c0_id=request.c0_id,
+            c1_id=request.c1_id,
+            min_price=request.min_price,
+            max_price=request.max_price,
+        )
+    else:
+        candidates = await get_items(db)
+
+    if not candidates:
+        return item_schema.AIRecommendationResponse(
+            answer="条件に合う商品が見つかりませんでした。",
+            items=[],
+            reasons={},
+        )
+
+    # Geminiに渡しすぎないように制限
+    candidates = candidates[:50]
+
+    candidate_payload = [
+        {
+            "id": item.id,
+            "name": item.name,
+            "description": item.description,
+            "price": item.price,
+            "category": f"{item.c0_name or ''} / {item.c1_name or ''}",
+            "tags": item.tags,
+        }
+        for item in candidates
+    ]
+
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    client = genai.Client(
+        vertexai=True,
+        project=project_id,
+        location="us-central1",
+    )
+
+    prompt = f"""
+あなたはフリマアプリの商品推薦アシスタントです。
+ユーザーの質問に対して、候補商品の中からおすすめ商品を少なくとも1つ、最大3つ選んでください。
+
+条件:
+- 必ず候補商品のidから選ぶ
+- 存在しないidを作らない
+- ユーザーの質問に合う理由を日本語で簡潔に説明する
+- 回答はJSONのみ
+- 商品が複数ある場合は、より質問に合う順に並べる
+
+ユーザーの質問:
+{request.question}
+
+候補商品:
+{json.dumps(candidate_payload, ensure_ascii=False)}
+
+JSON形式:
+{{
+  "answer": "全体としての短い回答文",
+  "recommendations": [
+    {{
+      "item_id": 1,
+      "reason": "おすすめ理由"
+    }}
+  ]
+}}
+"""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+
+        data = json.loads(response.text)
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Gemini response was not valid JSON")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    candidate_by_id = {item.id: item for item in candidates}
+
+    selected_items = []
+    reasons = {}
+
+    for rec in data.get("recommendations", []):
+        item_id = rec.get("item_id")
+        reason = rec.get("reason", "")
+
+        if item_id in candidate_by_id and item_id not in reasons:
+            selected_items.append(candidate_by_id[item_id])
+            reasons[item_id] = reason
+
+        if len(selected_items) >= 3:
+            break
+
+    if not selected_items:
+        selected_items = candidates[:1]
+        reasons[selected_items[0].id] = "条件に近い商品としておすすめします。"
+
+    return item_schema.AIRecommendationResponse(
+        answer=data.get("answer", "おすすめ商品を選びました。"),
+        items=selected_items,
+        reasons=reasons,
+    )
