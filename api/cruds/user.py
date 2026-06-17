@@ -38,6 +38,11 @@ async def update_user(db: AsyncSession, firebase_uid: str, request: user_schema.
     user.email = request.email
     user.icon_url = request.icon_url
     user.bio = request.bio
+    user.delivery_place_type = request.delivery_place_type
+    user.postal_code = request.postal_code
+    user.address_city = request.address_city
+    user.address_street = request.address_street
+    user.address_building = request.address_building
 
     await db.commit()
     await db.refresh(user)

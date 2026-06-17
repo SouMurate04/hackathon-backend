@@ -13,6 +13,11 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     icon_url = Column(String(255))
     bio = Column(String(255))
+    delivery_place_type = Column(String(50))
+    postal_code = Column(String(20))
+    address_city = Column(String(255))
+    address_street = Column(String(255))
+    address_building = Column(String(255))
 
 # 商品
 class Item(Base):
@@ -84,6 +89,10 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     timestamp = Column(DateTime, nullable=False)
     is_read = Column(Boolean, nullable=False, default=False)
+    notification_type = Column(String(50))
+    sender_id = Column(Integer, ForeignKey("users.id"))
+    requires_action = Column(Boolean, nullable=False, default=False)
+    responded_at = Column(DateTime)
 
 # フォロー関係
 class Follow(Base):

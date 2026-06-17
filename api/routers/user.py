@@ -41,6 +41,11 @@ async def update_user(
     bio: str = Form(""), 
     icon: UploadFile | None = File(None), 
     icon_url: str | None = Form(None),
+    delivery_place_type: str | None = Form(None),
+    postal_code: str | None = Form(None),
+    address_city: str | None = Form(None),
+    address_street: str | None = Form(None),
+    address_building: str | None = Form(None),
     db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
     ):
 
@@ -59,7 +64,9 @@ async def update_user(
     else:
         final_icon_url = icon_url
 
-    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=final_icon_url)
+    request = user_schema.UpdatedUser(name=name, email=email, bio=bio, icon_url=final_icon_url,
+        delivery_place_type=delivery_place_type, postal_code=postal_code,
+        address_city=address_city, address_street=address_street, address_building=address_building)
 
     firebase_uid = firebase_user["uid"]
     return await user_crud.update_user(db, firebase_uid, request)

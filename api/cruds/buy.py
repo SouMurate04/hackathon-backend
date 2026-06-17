@@ -10,11 +10,14 @@ import api.models as model
 import api.schemas.item as item_schema
 import api.cruds.notification as notification_crud
 
-async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str):
+async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
     user_ret = await db.execute(
         select(model.User).where(model.User.firebase_uid == firebase_uid)
     )
     buyer = user_ret.scalars().first()
+
+    if buyer is None:
+        raise HTTPException(status_code=404, detail="User not found")
 
     item_ret = await db.execute(
         select(model.Item).where(model.Item.id == item_id)
@@ -24,18 +27,51 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str):
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
 
+    if request.delivery_place_type in ["home_handoff", "home_delivery_box"]:
+        if not request.postal_code or not request.address_city or not request.address_street:
+            raise HTTPException(status_code=400, detail="Shipping address is incomplete")
+
+    if request.delivery_place_type == "pickup_point":
+        if not request.address_building:
+            raise HTTPException(status_code=400, detail="Pickup point name is required")
+
     if item.buyer_id is not None:
         raise HTTPException(status_code=400, detail="Item is already sold")
 
+    if request.save_as_default:
+        buyer.delivery_place_type = request.delivery_place_type
+        buyer.postal_code = request.postal_code
+        buyer.address_city = request.address_city
+        buyer.address_street = request.address_street
+        buyer.address_building = request.address_building
+
     item.buyer_id = buyer.id
     item.bought_at = datetime.now()
+
+    shipping_text = "\n".join([
+        f"配送先種別: {request.delivery_place_type}",
+        f"郵便番号: {request.postal_code or ''}",
+        f"都道府県・市区町村: {request.address_city or ''}",
+        f"町域・番地: {request.address_street or ''}",
+        f"建物名・店舗名: {request.address_building or ''}",
+    ])
+
+    buyer_message = request.message_to_seller.strip() if request.message_to_seller else ""
+
+    message = f"あなたが出品した「{item.name}」が購入されました。\n\n{shipping_text}"
+
+    if buyer_message:
+        message += f"\n\n購入者からのメッセージ:\n{buyer_message}"
 
     await notification_crud.create_notification(
         db=db,
         user_id=item.seller_id,
         item_id=item.id,
         title="商品が購入されました",
-        message=f"あなたが出品した「{item.name}」が購入されました。",
+        message=message,
+        notification_type="item_purchased",
+        sender_id=buyer.id,
+        requires_action=True,
     )
 
     like_result = await db.execute(

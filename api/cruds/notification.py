@@ -20,6 +20,9 @@ async def create_notification(
     title: str,
     message: str,
     item_id: int | None = None,
+    notification_type: str | None = None,
+    sender_id: int | None = None,
+    requires_action: bool = False,
 ):
     notification = model.Notification(
         user_id=user_id,
@@ -28,6 +31,9 @@ async def create_notification(
         message=message,
         timestamp=datetime.now(),
         is_read=False,
+        notification_type=notification_type,
+        sender_id=sender_id,
+        requires_action=requires_action,
     )
 
     db.add(notification)
@@ -92,17 +98,84 @@ async def get_notification_detail(
     if notification is None:
         raise HTTPException(status_code=404, detail="Notification not found")
 
-    notification.is_read = True
+    if not notification.requires_action:
+        notification.is_read = True
+        await db.commit()
+
 
     data = {
         "id": notification.id,
         "title": notification.title,
         "message": notification.message,
         "timestamp": notification.timestamp,
-        "is_read": True,
+        "is_read": notification.is_read,
         "item_id": notification.item_id,
+        "notification_type": notification.notification_type,
+        "sender_id": notification.sender_id,
+        "requires_action": notification.requires_action,
+        "responded_at": notification.responded_at,
     }
+
+    return data
+
+async def reply_notification(db: AsyncSession, notification_id: int, firebase_uid: str, message: str):
+    user = await get_user_by_firebase_uid(db, firebase_uid)
+
+    result = await db.execute(
+        select(model.Notification).where(
+            model.Notification.id == notification_id,
+            model.Notification.user_id == user.id,
+        )
+    )
+    notification = result.scalars().first()
+
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    if not notification.requires_action or notification.responded_at is not None:
+        raise HTTPException(status_code=400, detail="This notification cannot be replied")
+
+    if notification.sender_id is None:
+        raise HTTPException(status_code=400, detail="Reply target not found")
+
+    await create_notification(
+        db=db,
+        user_id=notification.sender_id,
+        item_id=notification.item_id,
+        title="出品者からメッセージが届きました",
+        message=message,
+        notification_type="seller_reply",
+        sender_id=user.id,
+        requires_action=False,
+    )
+
+    notification.is_read = True
+    notification.responded_at = datetime.now()
 
     await db.commit()
 
-    return data
+    return {"sent": True}
+
+async def dismiss_notification(db: AsyncSession, notification_id: int, firebase_uid: str):
+    user = await get_user_by_firebase_uid(db, firebase_uid)
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    result = await db.execute(
+        select(model.Notification).where(
+            model.Notification.id == notification_id,
+            model.Notification.user_id == user.id,
+        )
+    )
+    notification = result.scalars().first()
+
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notification.is_read = True
+    notification.responded_at = datetime.now()
+
+    await db.commit()
+
+    return {"dismissed": True}

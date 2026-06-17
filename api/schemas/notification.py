@@ -21,10 +21,14 @@ class NotificationDetail(BaseModel):
     timestamp: datetime
     is_read: bool
     item_id: int | None = None
+    notification_type: str | None = None
+    sender_id: int | None = None
+    requires_action: bool = False
+    responded_at: datetime | None = None
 
-    model_config = {
-        "from_attributes": True
-    }
+
+class NotificationReplyRequest(BaseModel):
+    message: str
 
 
 class UnreadCount(BaseModel):

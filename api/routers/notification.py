@@ -39,3 +39,30 @@ async def get_notification_detail(
         notification_id,
         firebase_user["uid"],
     )
+
+@router.post("/notification/{notification_id}/reply")
+async def reply_notification(
+    notification_id: int,
+    request: notification_schema.NotificationReplyRequest,
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    return await notification_crud.reply_notification(
+        db,
+        notification_id,
+        firebase_user["uid"],
+        request.message,
+    )
+
+
+@router.post("/notification/{notification_id}/dismiss")
+async def dismiss_notification(
+    notification_id: int,
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    return await notification_crud.dismiss_notification(
+        db,
+        notification_id,
+        firebase_user["uid"],
+    )
