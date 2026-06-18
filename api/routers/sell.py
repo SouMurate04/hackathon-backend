@@ -141,7 +141,7 @@ async def delete_item(
 
 @router.post("/sell/recommend", response_model=item_schema.GeneratedIntroduction)
 async def generate_introduction(
-    image: UploadFile = File(...),
+    images: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
     if not image.content_type or not image.content_type.startswith("image/"):
