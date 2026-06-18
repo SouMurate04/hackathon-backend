@@ -6,17 +6,19 @@ class NewItem(BaseModel):
     name: str
     description: str
     price: int
-    image_url: str
+    image_urls: list[str]
     c0_id: int
     c1_id: int
     tags: list[str] = []
+
 
 class ListedItem(BaseModel):
     id: int
     name: str
     description: str
     price: int
-    image_url: str
+    image_url: str | None = None
+    image_urls: list[str] = []
     c0_id: int | None = None
     c1_id: int | None = None
     c0_name: str | None = None
@@ -26,10 +28,6 @@ class ListedItem(BaseModel):
     posted_at: datetime
     buyer_id: int | None = None
     tags: list[str] = []
-
-    model_config = {
-        "from_attributes": True
-    }
 
 
 # 商品(返り値)

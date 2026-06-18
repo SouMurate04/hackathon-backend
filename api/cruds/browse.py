@@ -31,6 +31,58 @@ def parse_search_words(keyword: str) -> tuple[list[str], list[str]]:
 
     return normal_keywords, tag_keywords
 
+def build_item_dicts(rows):
+    items_by_id = {}
+
+    for row in rows:
+        item_id = row["id"]
+
+        if item_id not in items_by_id:
+            items_by_id[item_id] = {
+                "id": row["id"],
+                "image_url": None,
+                "image_urls": [],
+                "name": row["name"],
+                "description": row["description"],
+                "price": row["price"],
+                "posted_at": row["posted_at"],
+                "seller_id": row["seller_id"],
+                "buyer_id": row["buyer_id"],
+                "c0_id": row["c0_id"],
+                "c1_id": row["c1_id"],
+                "c0_name": row["c0_name"],
+                "c1_name": row["c1_name"],
+                "seller": row["seller"],
+                "tags": [],
+                "_image_ids": set(),
+                "_tag_ids": set(),
+            }
+
+        item = items_by_id[item_id]
+
+        if row["image_id"] is not None and row["image_id"] not in item["_image_ids"]:
+            item["_image_ids"].add(row["image_id"])
+            item["image_urls"].append(row["image_url"])
+
+            if item["image_url"] is None:
+                item["image_url"] = row["image_url"]
+
+        if row["tag_id"] is not None and row["tag_id"] not in item["_tag_ids"]:
+            item["_tag_ids"].add(row["tag_id"])
+            item["tags"].append(row["tag"])
+
+    items = []
+
+    for item in items_by_id.values():
+        item.pop("_image_ids", None)
+        item.pop("_tag_ids", None)
+        items.append(item)
+
+    return items
+
+def build_listed_items(rows) -> List[item_schema.ListedItem]:
+    return [item_schema.ListedItem(**item) for item in build_item_dicts(rows)]
+
 async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
     CategoryC0 = aliased(model.Category)
     CategoryC1 = aliased(model.Category)
@@ -49,7 +101,9 @@ async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
             CategoryC0.name.label("c0_name"),
             CategoryC1.name.label("c1_name"),
             model.User.name.label("seller"),
+            model.Image.id.label("image_id"),
             model.Image.url.label("image_url"),
+            model.Tag.id.label("tag_id"),
             model.Tag.name.label("tag"),
         )
         .join(model.User, model.Item.seller_id == model.User.id)
@@ -58,39 +112,13 @@ async def get_items(db: AsyncSession) -> List[item_schema.ListedItem]:
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
         .where(model.Item.buyer_id.is_(None))
-        .order_by(model.Item.posted_at.desc())
+        .order_by(model.Item.posted_at.desc(), model.Image.id.asc(), model.Tag.id.asc())
     )
 
     result = await db.execute(query)
     rows = result.mappings().all()
 
-    items_by_id = {}
-
-    for row in rows:
-        item_id = row["id"]
-
-        if item_id not in items_by_id:
-            items_by_id[item_id] = {
-                "id": row["id"],
-                "image_url": row["image_url"],
-                "name": row["name"],
-                "description": row["description"],
-                "price": row["price"],
-                "posted_at": row["posted_at"],
-                "seller_id": row["seller_id"],
-                "buyer_id": row["buyer_id"],
-                "c0_id": row["c0_id"],
-                "c1_id": row["c1_id"],
-                "c0_name": row["c0_name"],
-                "c1_name": row["c1_name"],
-                "seller": row["seller"],
-                "tags": [],
-            }
-
-        if row["tag"] is not None:
-            items_by_id[item_id]["tags"].append(row["tag"])
-
-    return [item_schema.ListedItem(**item) for item in items_by_id.values()]
+    return build_listed_items(rows)
 
 async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
 
@@ -111,7 +139,9 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
             CategoryC0.name.label("c0_name"),
             CategoryC1.name.label("c1_name"),
             model.User.name.label("seller"),
+            model.Image.id.label("image_id"),
             model.Image.url.label("image_url"),
+            model.Tag.id.label("tag_id"),
             model.Tag.name.label("tag"),
         )
         .join(model.User, model.Item.seller_id == model.User.id)
@@ -120,6 +150,7 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
         .outerjoin(model.Image, model.Item.id == model.Image.item_id)
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
         .where(model.Item.id == item_id)
+        .order_by(model.Image.id.asc(), model.Tag.id.asc())
     )
 
     result = await db.execute(query)
@@ -128,30 +159,7 @@ async def get_item(db: AsyncSession, item_id: int) -> item_schema.ListedItem:
     if not rows:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    row0 = rows[0]
-
-    item = {
-        "id": row0["id"],
-        "image_url": row0["image_url"],
-        "name": row0["name"],
-        "description": row0["description"],
-        "price": row0["price"],
-        "posted_at": row0["posted_at"],
-        "seller_id": row0["seller_id"],
-        "buyer_id": row0["buyer_id"],
-        "c0_id": row0["c0_id"],
-        "c1_id": row0["c1_id"],
-        "c0_name": row0["c0_name"],
-        "c1_name": row0["c1_name"],
-        "seller": row0["seller"],
-        "tags": [],
-    }
-
-    for row in rows:
-        if row["tag"] is not None:
-            item["tags"].append(row["tag"])
-
-    return item_schema.ListedItem(**item)
+    return item_schema.ListedItem(**build_item_dicts(rows)[0])
 
 async def get_recommended_items(
     db: AsyncSession,
@@ -225,7 +233,9 @@ async def get_subscription_items(
             CategoryC0.name.label("c0_name"),
             CategoryC1.name.label("c1_name"),
             model.User.name.label("seller"),
+            model.Image.id.label("image_id"),
             model.Image.url.label("image_url"),
+            model.Tag.id.label("tag_id"),
             model.Tag.name.label("tag"),
         )
         .join(model.Follow, model.Follow.followee_id == model.Item.seller_id)
@@ -236,39 +246,13 @@ async def get_subscription_items(
         .outerjoin(model.Tag, model.Item.id == model.Tag.item_id)
         .where(model.Follow.follower_id == current_user.id)
         .where(model.Item.buyer_id.is_(None))
-        .order_by(model.Item.posted_at.desc())
+        .order_by(model.Item.posted_at.desc(), model.Image.id.asc(), model.Tag.id.asc())
     )
 
     result = await db.execute(query)
     rows = result.mappings().all()
 
-    items_by_id = {}
-
-    for row in rows:
-        item_id = row["id"]
-
-        if item_id not in items_by_id:
-            items_by_id[item_id] = {
-                "id": row["id"],
-                "image_url": row["image_url"],
-                "name": row["name"],
-                "description": row["description"],
-                "price": row["price"],
-                "posted_at": row["posted_at"],
-                "seller_id": row["seller_id"],
-                "buyer_id": row["buyer_id"],
-                "c0_id": row["c0_id"],
-                "c1_id": row["c1_id"],
-                "c0_name": row["c0_name"],
-                "c1_name": row["c1_name"],
-                "seller": row["seller"],
-                "tags": [],
-            }
-
-        if row["tag"] is not None:
-            items_by_id[item_id]["tags"].append(row["tag"])
-
-    return [item_schema.ListedItem(**item) for item in items_by_id.values()]
+    return build_listed_items(rows)
 
 async def search_items(
     db: AsyncSession,
@@ -307,7 +291,9 @@ async def search_items(
             CategoryC0.name.label("c0_name"),
             CategoryC1.name.label("c1_name"),
             model.User.name.label("seller"),
+            model.Image.id.label("image_id"),
             model.Image.url.label("image_url"),
+            model.Tag.id.label("tag_id"),
             model.Tag.name.label("tag"),
         )
         .join(model.User, model.Item.seller_id == model.User.id)
@@ -330,40 +316,16 @@ async def search_items(
     if max_price is not None:
         query = query.where(model.Item.price <= max_price)
 
-    query = query.order_by(model.Item.posted_at.desc())
+    query = query.order_by(model.Item.posted_at.desc(), model.Image.id.asc(), model.Tag.id.asc())
 
     result = await db.execute(query)
     rows = result.mappings().all()
 
-    items_by_id = {}
-
-    for row in rows:
-        item_id = row["id"]
-
-        if item_id not in items_by_id:
-            items_by_id[item_id] = {
-                "id": row["id"],
-                "image_url": row["image_url"],
-                "name": row["name"],
-                "description": row["description"],
-                "price": row["price"],
-                "posted_at": row["posted_at"],
-                "seller_id": row["seller_id"],
-                "buyer_id": row["buyer_id"],
-                "c0_id": row["c0_id"],
-                "c1_id": row["c1_id"],
-                "c0_name": row["c0_name"],
-                "c1_name": row["c1_name"],
-                "seller": row["seller"],
-                "tags": [],
-            }
-
-        if row["tag"] is not None:
-            items_by_id[item_id]["tags"].append(row["tag"])
+    items = build_item_dicts(rows)
 
     matched_items = []
 
-    for item in items_by_id.values():
+    for item in items:
         item_tags = [tag.lower() for tag in item["tags"]]
 
         searchable_text = " ".join([

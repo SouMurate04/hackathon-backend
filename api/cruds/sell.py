@@ -31,12 +31,11 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
     db.add(item_record)
     await db.flush()
 
-    image_record = model.Image(
-        item_id=item_record.id,
-        url=new_item.image_url
-    )
-
-    db.add(image_record)
+    for image_url in new_item.image_urls:
+        db.add(model.Image(
+            item_id=item_record.id,
+            url=image_url,
+        ))
 
     for tag in new_item.tags:
         tag_record = model.Tag(
@@ -127,7 +126,7 @@ async def update_item(
     c0_id: int,
     c1_id: int,
     tags: list[str],
-    image_url: str | None,
+    image_urls: list[str] | None,
 ):
     seller = await get_user_by_firebase_uid(db, firebase_uid)
 
@@ -154,16 +153,13 @@ async def update_item(
     item.c0_id = c0_id
     item.c1_id = c1_id
 
-    if image_url is not None:
-        image_result = await db.execute(
-            select(model.Image).where(model.Image.item_id == item_id)
+    if image_urls is not None:
+        await db.execute(
+            delete(model.Image).where(model.Image.item_id == item_id)
         )
-        image = image_result.scalars().first()
 
-        if image is None:
+        for image_url in image_urls:
             db.add(model.Image(item_id=item_id, url=image_url))
-        else:
-            image.url = image_url
 
     await db.execute(
         delete(model.Tag).where(model.Tag.item_id == item_id)

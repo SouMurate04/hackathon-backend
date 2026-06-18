@@ -23,15 +23,18 @@ router = APIRouter()
 # 商品出品
 @router.post("/sell", response_model=None)
 async def create_item(
-    name: str = Form(...), price: int = Form(...),
-    description: str = Form(""), image: UploadFile = File(...), 
-    c0_id: int = Form(...), c1_id: int = Form(...),
+    name: str = Form(...),
+    price: int = Form(...),
+    description: str = Form(""),
+    images: List[UploadFile] = File(...),
+    c0_id: int = Form(...),
+    c1_id: int = Form(...),
     tags: List[str] = Form([]),
-    db: AsyncSession = Depends(get_db), firebase_user: dict = Depends(get_current_firebase_user)
-    ):
-
-    if len(tags) > 10:
-        raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    if not images:
+        raise HTTPException(status_code=400, detail="At least one image is required")
 
     bucket_name = os.getenv("GCS_BUCKET_NAME")
     if not bucket_name:
@@ -40,19 +43,32 @@ async def create_item(
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
 
-    object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
-    blob = bucket.blob(object_name)
-    blob.upload_from_file(image.file, content_type=image.content_type)
-    image_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+    image_urls = []
+
+    for image in images:
+        if not image.content_type or not image.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Image file is required")
+
+        object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
+        blob = bucket.blob(object_name)
+        blob.upload_from_file(image.file, content_type=image.content_type)
+        image_urls.append(f"https://storage.googleapis.com/{bucket_name}/{object_name}")
+
+    tags = [tag.strip() for tag in tags if tag.strip()]
+
+    if len(tags) > 10:
+        raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
 
     request = item_schema.NewItem(
         name=name,
         price=price,
         description=description,
-        image_url=image_url,
+        image_urls=image_urls,
         c0_id=c0_id,
         c1_id=c1_id,
-        tags=tags)
+        tags=tags,
+    )
+
     firebase_uid = firebase_user["uid"]
     return await sell_crud.create_item(db, firebase_uid, request)
 
@@ -70,16 +86,18 @@ async def update_item(
     c0_id: int = Form(...),
     c1_id: int = Form(...),
     tags: List[str] = Form([]),
-    image: UploadFile | None = File(None),
+    existing_image_urls: List[str] = Form([]),
+    images: List[UploadFile] = File([]),
     db: AsyncSession = Depends(get_db),
     firebase_user: dict = Depends(get_current_firebase_user),
 ):
 
     if len(tags) > 10:
         raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
-    image_url = None
 
-    if image is not None:
+    image_urls = list(existing_image_urls)
+
+    if images is not None:
         bucket_name = os.getenv("GCS_BUCKET_NAME")
         if not bucket_name:
             raise HTTPException(status_code=500, detail="GCS bucket is not configured")
@@ -87,10 +105,14 @@ async def update_item(
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
 
-        object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
-        blob = bucket.blob(object_name)
-        blob.upload_from_file(image.file, content_type=image.content_type)
-        image_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+        for image in images:
+            object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
+            blob = bucket.blob(object_name)
+            blob.upload_from_file(image.file, content_type=image.content_type)
+            image_urls.append(f"https://storage.googleapis.com/{bucket_name}/{object_name}")
+
+        if not image_urls:
+            raise HTTPException(status_code=400, detail="At least one image is required")
 
     firebase_uid = firebase_user["uid"]
 
@@ -104,7 +126,7 @@ async def update_item(
         c0_id=c0_id,
         c1_id=c1_id,
         tags=tags,
-        image_url=image_url,
+        image_urls=image_urls,
     )
 
 
