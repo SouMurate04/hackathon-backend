@@ -3,7 +3,7 @@ import os
 from uuid import uuid4
 
 from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Request
 from google import genai
 from google.genai import types
 from google.cloud import storage
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.db import get_db
 from api.firebase_auth import get_current_firebase_user
 
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from sqlalchemy import select
 import api.models as model
 import api.schemas.item as item_schema
@@ -80,39 +81,88 @@ async def list_notifications(user_id: int, db: AsyncSession = Depends(get_db)):
 @router.put("/sell/{item_id}", response_model=None)
 async def update_item(
     item_id: int,
-    name: str = Form(...),
-    price: int = Form(...),
-    description: str = Form(""),
-    c0_id: int = Form(...),
-    c1_id: int = Form(...),
-    tags: List[str] = Form([]),
-    existing_image_urls: List[str] = Form([]),
-    images: List[UploadFile] = File([]),
+    request: Request,
     db: AsyncSession = Depends(get_db),
     firebase_user: dict = Depends(get_current_firebase_user),
 ):
+    form = await request.form()
+
+    name = form.get("name")
+    price = form.get("price")
+    description = form.get("description", "")
+    c0_id = form.get("c0_id")
+    c1_id = form.get("c1_id")
+
+    if not name or not price or not c0_id or not c1_id:
+        raise HTTPException(status_code=400, detail="Required fields are missing")
+
+    try:
+        price = int(price)
+        c0_id = int(c0_id)
+        c1_id = int(c1_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid numeric field")
+
+    tags = [
+        str(tag).strip()
+        for tag in form.getlist("tags")
+        if str(tag).strip()
+    ]
 
     if len(tags) > 10:
         raise HTTPException(status_code=400, detail="Tags must be 10 or fewer")
 
-    image_urls = list(existing_image_urls)
+    image_order = form.getlist("image_order")
 
-    if images is not None:
-        bucket_name = os.getenv("GCS_BUCKET_NAME")
-        if not bucket_name:
-            raise HTTPException(status_code=500, detail="GCS bucket is not configured")
+    if not image_order:
+        raise HTTPException(status_code=400, detail="At least one image is required")
 
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
+    bucket_name = os.getenv("GCS_BUCKET_NAME")
+    if not bucket_name:
+        raise HTTPException(status_code=500, detail="GCS bucket is not configured")
 
-        for image in images:
-            object_name = f"items/{uuid4()}.{image.filename.split('.')[-1]}"
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+
+    image_urls = []
+
+    for image_key in image_order:
+        image_key = str(image_key)
+
+        if image_key.startswith("existing:"):
+            image_url = image_key.removeprefix("existing:")
+
+            if not image_url:
+                raise HTTPException(status_code=400, detail="Invalid existing image URL")
+
+            image_urls.append(image_url)
+
+        elif image_key.startswith("new:"):
+            uploaded_image = form.get(image_key)
+
+            if not isinstance(uploaded_image, StarletteUploadFile):
+                raise HTTPException(status_code=400, detail="New image file is missing")
+
+            if not uploaded_image.content_type or not uploaded_image.content_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail="Image file is required")
+
+            extension = uploaded_image.filename.split(".")[-1] if "." in uploaded_image.filename else "bin"
+            object_name = f"items/{uuid4()}.{extension}"
+
             blob = bucket.blob(object_name)
-            blob.upload_from_file(image.file, content_type=image.content_type)
-            image_urls.append(f"https://storage.googleapis.com/{bucket_name}/{object_name}")
+            blob.upload_from_file(
+                uploaded_image.file,
+                content_type=uploaded_image.content_type,
+            )
 
-        if not image_urls:
-            raise HTTPException(status_code=400, detail="At least one image is required")
+            image_url = f"https://storage.googleapis.com/{bucket_name}/{object_name}"
+            image_urls.append(image_url)
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid image order value")
+
+    if not image_urls:
+        raise HTTPException(status_code=400, detail="At least one image is required")
 
     firebase_uid = firebase_user["uid"]
 
