@@ -31,6 +31,22 @@ async def create_item(db: AsyncSession, firebase_uid: str, new_item: item_schema
     db.add(item_record)
     await db.flush()
 
+    follower_result = await db.execute(
+        select(model.Follow.follower_id).where(model.Follow.followee_id == seller.id)
+    )
+    follower_ids = {row[0] for row in follower_result.all()}
+
+    for follower_id in follower_ids:
+        await notification_crud.create_notification(
+            db=db,
+            user_id=follower_id,
+            item_id=item_record.id,
+            title=f"{seller.name or 'ユーザー'}さんが新たに出品しました",
+            message=f"{seller.name or 'ユーザー'}さんが新たに「{item_record.name}」を出品しました。",
+            notification_type="followed_seller_item",
+            sender_id=seller.id,
+        )
+
     for image_url in new_item.image_urls:
         db.add(model.Image(
             item_id=item_record.id,
@@ -209,9 +225,15 @@ async def delete_item(
         await notification_crud.create_notification(
             db=db,
             user_id=liked_user_id,
-            item_id=item.id,
-            title="いいねした商品の出品が取り下げられました",
-            message=f"いいねしていた「{item.name}」の出品が取り下げられました。",
+            item_id=None,
+            title=f"いいねした「{item.name}」の出品が取り下げられました。",
+            message=(
+                f"あなたがいいねしていた「{item.name}」についてですが、"
+                f"{seller.name or '出品者'}さんが出品を取り下げたため購入できなくなりました。"
+                "ご了承ください。"
+            ),
+            notification_type="liked_item_deleted",
+            sender_id=seller.id,
         )
 
     await db.execute(delete(model.Like).where(model.Like.item_id == item_id))

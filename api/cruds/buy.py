@@ -59,8 +59,8 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
     buyer_message = request.message_to_seller.strip() if request.message_to_seller else ""
 
     message = (
-        f"{buyer.name}さんが、あなたが出品した「{item.name}」を購入しました。\n\n"
-        f"配送先情報:\n{shipping_text}"
+        f"あなたが出品した「{item.name}」は，"
+        f"{buyer.name or 'ユーザー'}さんに購入されました。"
     )
 
     if buyer_message:
@@ -70,7 +70,7 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
         db=db,
         user_id=item.seller_id,
         item_id=item.id,
-        title="商品が購入されました",
+        title=f"「{item.name}」が購入されました",
         message=message,
         notification_type="item_purchased",
         sender_id=buyer.id,
@@ -82,6 +82,12 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
     )
     liked_user_ids = {row[0] for row in like_result.all()}
 
+    seller_result = await db.execute(
+        select(model.User).where(model.User.id == item.seller_id)
+    )
+    seller = seller_result.scalars().first()
+    seller_name = seller.name if seller else "出品者"
+
     for liked_user_id in liked_user_ids:
         if liked_user_id == buyer.id:
             continue
@@ -92,8 +98,12 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
             db=db,
             user_id=liked_user_id,
             item_id=item.id,
-            title="いいねした商品が購入されました",
-            message=f"いいねしていた「{item.name}」が他のユーザーに購入されました。",
+            title=f"いいねした「{item.name}」が購入されました",
+            message=(
+                f"あなたがいいねしていた{seller_name}さんの「{item.name}」は、"
+                "他のユーザーによって購入されました。ご了承ください。"
+            ),
+            notification_type="liked_item_purchased",
         )
 
     await db.commit()

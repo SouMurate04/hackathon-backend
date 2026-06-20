@@ -52,8 +52,10 @@ async def follow_user(db: AsyncSession, followee_id: int, firebase_uid: str):
         db=db,
         user_id=followee_id,
         item_id=None,
-        title="新しいフォロワーがいます",
+        title=f"{follower.name or 'ユーザー'}さんにフォローされました。",
         message=f"{follower.name or 'ユーザー'}さんにフォローされました。",
+        notification_type="followed",
+        sender_id=follower.id,
     )
 
     await db.commit()

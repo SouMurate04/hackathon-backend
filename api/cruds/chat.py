@@ -59,6 +59,8 @@ async def create_message(
             item_id=item.id,
             title="チャットに新しいメッセージがあります",
             message=f"「{item.name}」のチャットに新しいメッセージが投稿されました。",
+            notification_type="chat_message",
+            sender_id=user_id,
         )
 
     db.add(chat)

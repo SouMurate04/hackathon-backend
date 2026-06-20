@@ -138,16 +138,26 @@ async def reply_notification(db: AsyncSession, notification_id: int, firebase_ui
     if notification.sender_id is None:
         raise HTTPException(status_code=400, detail="Reply target not found")
 
+    item = None
+    if notification.item_id is not None:
+        item_result = await db.execute(
+            select(model.Item).where(model.Item.id == notification.item_id)
+        )
+        item = item_result.scalars().first()
+
+    item_name = item.name if item else "商品"
+
     reply_message = (
-        f"{user.name}さんからメッセージが届きました。\n\n"
-        f"{message}"
+        f"あなたが購入した「{item_name}」の出品者である"
+        f"{user.name or 'ユーザー'}さんからメッセージが届きました。"
+        f"\n\n出品者からのメッセージ:\n{message}"
     )
 
     await create_notification(
         db=db,
         user_id=notification.sender_id,
         item_id=notification.item_id,
-        title="出品者からメッセージが届きました",
+        title=f"「{item_name}」の出品者からメッセージが届きました。",
         message=reply_message,
         notification_type="seller_reply",
         sender_id=user.id,
