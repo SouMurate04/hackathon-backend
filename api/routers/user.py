@@ -70,3 +70,12 @@ async def update_user(
 
     firebase_uid = firebase_user["uid"]
     return await user_crud.update_user(db, firebase_uid, request)
+
+# ユーザー削除
+@router.delete("/user", response_model=None)
+async def delete_user(
+    db: AsyncSession = Depends(get_db),
+    firebase_user: dict = Depends(get_current_firebase_user),
+):
+    firebase_uid = firebase_user["uid"]
+    return await user_crud.delete_user(db, firebase_uid)
