@@ -58,7 +58,10 @@ async def buy_item(db: AsyncSession, item_id: int, firebase_uid: str, request):
 
     buyer_message = request.message_to_seller.strip() if request.message_to_seller else ""
 
-    message = f"あなたが出品した「{item.name}」が購入されました。\n\n{shipping_text}"
+    message = (
+        f"{buyer.name}さんが、あなたが出品した「{item.name}」を購入しました。\n\n"
+        f"配送先情報:\n{shipping_text}"
+    )
 
     if buyer_message:
         message += f"\n\n購入者からのメッセージ:\n{buyer_message}"
